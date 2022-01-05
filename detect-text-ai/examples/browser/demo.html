@@ -1,0 +1,299 @@
+<script src="/dist/tesseract.dev.js"></script>
+<script class="jsbin" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+<script>
+var dataImage;
+function readURL(input) {
+  if (input.files && input.files[0]) {
+	dataImage = input.files[0];
+    var reader = new FileReader();
+
+    reader.onload = function(e) {
+      $('.image-upload-wrap').hide();
+
+      $('.file-upload-image').attr('src', e.target.result);
+      $('.file-upload-content').show();
+
+      $('.image-title').html(input.files[0].name);
+    };
+
+    reader.readAsDataURL(input.files[0]);
+
+  } else {
+    removeUpload();
+  }
+}
+
+function submitUpload() {
+	recognizeFile(dataImage);
+}
+
+function removeUpload() {
+  $('.file-upload-input').replaceWith($('.file-upload-input').clone());
+  $('.file-upload-content').hide();
+  $('.image-upload-wrap').show();
+}
+$('.image-upload-wrap').bind('dragover', function () {
+    $('.image-upload-wrap').addClass('image-dropping');
+  });
+  $('.image-upload-wrap').bind('dragleave', function () {
+    $('.image-upload-wrap').removeClass('image-dropping');
+});
+
+function progressUpdate(packet){
+	var log = document.getElementById('log');
+
+	if(log.firstChild && log.firstChild.status === packet.status){
+		if('progress' in packet){
+			var progress = log.firstChild.querySelector('progress')
+			progress.value = packet.progress
+		}
+	}else{
+		if(packet.status == 'done'){
+			var line = document.createElement('div');
+			var pre = document.createElement('pre')
+			pre.appendChild(document.createTextNode(packet.data.data.text))
+			line.innerHTML = ''
+			line.appendChild(pre)
+
+		}
+		log.insertBefore(line, log.firstChild)
+	}
+}
+
+async function recognizeFile(file) {
+	document.querySelector('#loader').style.display = 'block';
+	const corePath = window.navigator.userAgent.indexOf("Edge") > -1
+	? '../../node_modules/tesseract.js-core/tesseract-core.asm.js'
+	: '../../node_modules/tesseract.js-core/tesseract-core.wasm.js';
+  const lang = document.querySelector('#langsel').value
+  const data = await Tesseract.recognize(file, lang, {
+    corePath,
+    logger: progressUpdate,
+  });
+  document.querySelector('#loader').style.display = 'none';
+  if(data){
+  	progressUpdate({ status: 'done', data });
+  }
+  else {
+	const errorDetect = "Detect Fail !"
+	progressUpdate({ status: 'done', errorDetect });
+  }
+}
+</script>
+<div id="wrapper">
+	<div class="file-upload">
+		<h3 id="titleApp">Detect text in image online</h3>
+		<select id="langsel" onchange="window.lastFile && recognizeFile(window.lastFile)">
+			<option value='eng' selected> English </option>
+			<option value='vie'> Vietnamese </option>
+		</select>
+		<button class="file-upload-btn" type="button" onclick="$('.file-upload-input').trigger( 'click' )">Add Image</button>
+		<div class="image-upload-wrap">
+			<input class="file-upload-input" id="dataImage" type='file' onchange="readURL(this);" accept="image/*" />
+			<div class="drag-text">
+				<h3>Select add Image</h3>
+			</div>
+		</div>
+		<div class="file-upload-content">
+			<img class="file-upload-image" src="#" alt="your image" />
+			<div class="image-title-wrap">
+			<button type="button" onclick="removeUpload()" class="remove-image">Remove <span class="image-title">Uploaded Image</span></button>
+			<button type="button" onclick="submitUpload()" class="submit-image">Submit <span class="image-title">Uploaded Image</span></button>
+			</div>
+		</div>
+		<div id="log">
+			<div id="loader"></div>
+		</div>
+	</div>
+</div>
+
+<style>
+#titleApp {
+	font-size: 25px;
+	font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+	font-weight: 700;
+	text-align: center;
+	color: darkslategray;
+}
+#wrapper {
+	width: 60%;
+	margin: 0 auto;
+}
+#frame {
+	display: block;
+	margin: 20px 0;
+	box-shadow: rgba(50, 50, 93, 0.25) 0px 13px 27px -5px, rgba(0, 0, 0, 0.3) 0px 8px 16px -8px;
+}
+#log > div {
+    color: #313131;
+    border-top: 1px solid #dadada;
+    padding: 9px;
+}
+#log > div:first-child {
+	font-size: 20px;
+	color : cadetblue;
+}
+.status {
+	min-width: 250px;
+}
+#log {
+    border: 1px solid #dadada;
+    padding: 10px;
+    margin: 20px auto;
+    min-height: 100px;
+	border-radius: 10px;
+	box-shadow: rgba(50, 50, 93, 0.25) 0px 13px 27px -5px, rgba(0, 0, 0, 0.3) 0px 8px 16px -8px;
+}
+#langsel {
+	margin-bottom: 20px;
+	padding: 3px 7px;
+	border-radius: 3px;
+	box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
+}
+#loader {
+  border: 8px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 8px solid #3498db !important;
+  width: 60px;
+  height: 60px;
+  animation: spin 2s linear infinite;
+  display: none;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.file-upload {
+  background-color: #ffffff;
+  width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+}
+
+.file-upload-btn {
+  width: 100%;
+  margin: 0;
+  color: #fff;
+  background: orange;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  border-bottom: 4px solid orange;
+  transition: all .2s ease;
+  outline: none;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.file-upload-btn:hover {
+  background: orange;
+  color: #ffffff;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+
+.file-upload-btn:active {
+  border: 0;
+  transition: all .2s ease;
+}
+
+.file-upload-content {
+  display: none;
+  text-align: center;
+}
+
+.file-upload-input {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-upload-wrap {
+  margin-top: 20px;
+  border: 4px dashed orange;
+  position: relative;
+}
+
+.image-dropping,
+.image-upload-wrap:hover {
+  background-color: orange;
+  border: 4px dashed #ffffff;
+}
+.image-title-wrap {
+  padding: 0 15px 15px 15px;
+  color: #222;
+}
+
+.drag-text {
+  text-align: center;
+}
+
+.drag-text h3 {
+  font-weight: 100;
+  text-transform: uppercase;
+  color: #99680e;
+  padding: 60px 0;
+}
+
+.file-upload-image {
+  max-height: 200px;
+  max-width: 200px;
+  margin: auto;
+  padding: 20px;
+}
+
+.remove-image, .submit-image {
+  width: 200px;
+  margin: 0;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  transition: all .2s ease;
+  outline: none;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.remove-image {
+  background: #cd4535;
+  border-bottom: 4px solid #b02818;
+}
+
+.submit-image {
+  background: #128f4c;
+  border-bottom: 4px solid #0e6d3a;
+}
+.remove-image:hover {
+  background: #c13b2a;
+  color: #ffffff;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+
+.remove-image:active {
+  border: 0;
+  transition: all .2s ease;
+}
+body {
+    font-family: sans-serif;
+    margin: 30px;
+	background-color: wheat;
+}
+
+progress {
+    display: block;
+    width: 100%;
+    transition: opacity 0.5s linear;
+}
+progress[value="1"] {
+    opacity: 0.5;
+}
+</style>
